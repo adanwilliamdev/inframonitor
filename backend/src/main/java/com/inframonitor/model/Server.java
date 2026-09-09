@@ -58,7 +58,3 @@ public class Server {
         updatedAt = LocalDateTime.now();
     }
 }
-
-public enum ServerStatus {
-    ONLINE, OFFLINE, DEGRADED, MAINTENANCE
-}
