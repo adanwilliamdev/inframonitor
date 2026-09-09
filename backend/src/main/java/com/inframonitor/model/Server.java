@@ -59,6 +59,6 @@ public class Server {
     }
 }
 
-enum ServerStatus {
+public enum ServerStatus {
     ONLINE, OFFLINE, DEGRADED, MAINTENANCE
 }
