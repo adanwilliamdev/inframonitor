@@ -1,0 +1,48 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    container_name: inframonitor-db
+    environment:
+      POSTGRES_DB: inframonitor
+      POSTGRES_USER: inframonitor
+      POSTGRES_PASSWORD: inframonitor123
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - inframonitor-network
+
+  backend:
+    build: ../backend
+    container_name: inframonitor-backend
+    ports:
+      - "8080:8080"
+    depends_on:
+      - postgres
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/inframonitor
+      SPRING_DATASOURCE_USERNAME: inframonitor
+      SPRING_DATASOURCE_PASSWORD: inframonitor123
+    networks:
+      - inframonitor-network
+
+  frontend:
+    build: ../frontend
+    container_name: inframonitor-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      - backend
+    networks:
+      - inframonitor-network
+
+volumes:
+  postgres_data:
+
+networks:
+  inframonitor-network:
+    driver: bridge
