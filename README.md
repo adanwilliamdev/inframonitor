@@ -1,50 +1,64 @@
-# InfraMonitor
+# 🖥️ InfraMonitor
 
-Sistema de Monitoramento de Infraestrutura de TI, com backend em **Spring Boot** e frontend em **React + Material UI**.
+> Sistema de monitoramento de infraestrutura de TI desenvolvido com **Spring Boot** e **React**, com dashboard, autenticação e persistência em PostgreSQL.
 
-## Stack
+## 🚀 Tecnologias
 
-| Camada     | Tecnologia                                      |
-|------------|--------------------------------------------------|
-| Frontend   | React 18, React Router 6, MUI 5, Axios, Chart.js  |
-| Backend    | Spring Boot 3.1.5 (Java 17), Spring Data JPA, Spring Security |
-| Banco      | PostgreSQL 15 (produção/Docker) / H2 (dev local)  |
-| Infra      | Docker + Docker Compose                           |
+| Camada             | Tecnologias                                                     |
+| ------------------ | --------------------------------------------------------------- |
+| **Frontend**       | React 18 · React Router 6 · Material UI 5 · Axios · Chart.js    |
+| **Backend**        | Java 17 · Spring Boot 3.1.5 · Spring Data JPA · Spring Security |
+| **Banco de Dados** | PostgreSQL 15 · H2                                              |
+| **Infraestrutura** | Docker · Docker Compose                                         |
+| **Automação**      | PowerShell                                                      |
 
-## Estrutura do projeto
+## 📁 Estrutura
 
-```
+```text
 inframonitor/
 ├── backend/          # API Spring Boot
-├── frontend/         # SPA React
-├── docker/           # docker-compose.yml
-├── scripts/          # scripts PowerShell de setup/start (Windows)
+├── frontend/         # Aplicação React
+├── docker/           # Docker Compose
+├── scripts/          # Scripts PowerShell
 └── README.md
 ```
 
-## Como rodar com Docker (recomendado)
+## 🐳 Execução com Docker
 
-Pré-requisitos: Docker Desktop instalado e em execução.
+### Pré-requisitos
+
+* Docker Desktop
+* Docker Compose
+
+### Iniciar
 
 ```bash
 cd docker
 docker compose up --build
 ```
 
-Serviços expostos:
-- Frontend: http://localhost:3000
-- Backend (API): http://localhost:8080
-- PostgreSQL: localhost:5432 (usuário/senha/banco: `inframonitor`)
+### Serviços
 
-Para derrubar o ambiente:
+| Serviço    | URL                   |
+| ---------- | --------------------- |
+| Frontend   | http://localhost:3000 |
+| Backend    | http://localhost:8080 |
+| PostgreSQL | localhost:5432        |
+
+### Parar
 
 ```bash
 docker compose down
 ```
 
-## Como rodar localmente (sem Docker)
+## 💻 Execução local
 
-Pré-requisitos: JDK 17+, Maven, Node.js 18+ e npm.
+### Pré-requisitos
+
+* JDK 17+
+* Maven
+* Node.js 18+
+* npm
 
 ### Backend
 
@@ -53,7 +67,19 @@ cd backend
 mvn clean spring-boot:run
 ```
 
-A API sobe em `http://localhost:8080`, usando o perfil padrão (H2 em memória — console em `http://localhost:8080/h2-console`).
+API:
+
+```text
+http://localhost:8080
+```
+
+Ambiente local utiliza **H2 em memória**.
+
+Console H2:
+
+```text
+http://localhost:8080/h2-console
+```
 
 ### Frontend
 
@@ -63,54 +89,84 @@ npm install
 npm start
 ```
 
-A aplicação abre em `http://localhost:3000`.
+Aplicação:
 
-### Scripts PowerShell (Windows)
+```text
+http://localhost:3000
+```
 
-Como atalho para o fluxo local, há dois scripts em `scripts/`:
+## ⚙️ Scripts PowerShell
+
+Para facilitar a execução no Windows:
 
 ```powershell
-scripts\setup.ps1   # instala dependências de backend e frontend
-scripts\start.ps1   # sobe backend e frontend em janelas separadas
+scripts\setup.ps1
+scripts\start.ps1
 ```
 
-## Correção aplicada (build do frontend falhando no Docker)
+| Script      | Função                    |
+| ----------- | ------------------------- |
+| `setup.ps1` | Instala as dependências   |
+| `start.ps1` | Inicia backend e frontend |
 
-O build do serviço `frontend` estava falhando dentro do Docker com o erro:
+## 🔧 Build do Frontend no Docker
 
+Foi corrigido um problema de build relacionado às dependências `ajv` / `ajv-keywords`.
+
+### Problema
+
+O Docker utilizava:
+
+```dockerfile
+RUN npm install --legacy-peer-deps
 ```
+
+sem um `package-lock.json` versionado, permitindo que o npm resolvesse diferentes versões das dependências.
+
+Isso resultava no erro:
+
+```text
 Error: Cannot find module 'ajv/dist/compile/codegen'
 ```
 
-**Causa:** o `Dockerfile` do frontend rodava `npm install --legacy-peer-deps` sem nenhum `package-lock.json` versionado. Sem o lockfile, o `npm` resolvia uma árvore de dependências onde a lib `ajv` (usada internamente pelo Webpack/`react-scripts`) ficava em uma versão incompatível com o `ajv-keywords` exigido no build, quebrando o `npm run build`.
+### Solução
 
-**Correção:**
-1. Foi gerado e versionado o arquivo `frontend/package-lock.json`, fixando uma árvore de dependências válida e testada (build local reproduzido com sucesso).
-2. O `frontend/Dockerfile` passou a usar `npm ci` (instalação determinística a partir do lockfile) no lugar de `npm install --legacy-peer-deps`:
+Foi adicionado e versionado o `package-lock.json`, permitindo uma instalação determinística:
 
-   ```dockerfile
-   COPY package.json package-lock.json ./
-   RUN npm ci
-   ```
+```dockerfile
+COPY package.json package-lock.json ./
+RUN npm ci
+```
 
-3. Pequenos avisos de lint em `src/App.js` e `src/index.js` também foram corrigidos (BOM no início dos arquivos e imports não utilizados de `react-router-dom`/`@mui/icons-material`).
-4. BOM (Byte Order Mark) também removido de `pom.xml`, das classes Java do backend e do `docker-compose.yml`, por boa prática — não causava o erro, mas evita problemas de parsing em outras ferramentas.
+Também foram realizados ajustes de lint e removidos **BOMs (Byte Order Mark)** desnecessários dos arquivos do projeto.
 
-Com isso, `docker compose up --build` volta a concluir o build das duas imagens (`backend` e `frontend`) sem erros.
+Com isso:
 
-> Dica para evitar regressão: sempre que adicionar ou atualizar uma dependência do frontend, rode `npm install` localmente e comite o `package-lock.json` atualizado junto com o `package.json`.
+```bash
+docker compose up --build
+```
 
-## Variáveis de ambiente (perfil Docker)
+conclui corretamente o build das imagens de **backend** e **frontend**.
 
-Definidas em `docker/docker-compose.yml` para o serviço `backend`:
+> **Boa prática:** sempre que uma dependência do frontend for adicionada ou atualizada, execute `npm install` e versione o `package-lock.json` junto com o `package.json`.
 
-| Variável                     | Valor no Docker                                  |
-|------------------------------|---------------------------------------------------|
-| `SPRING_PROFILES_ACTIVE`     | `docker`                                           |
-| `SPRING_DATASOURCE_URL`      | `jdbc:postgresql://postgres:5432/inframonitor`     |
-| `SPRING_DATASOURCE_USERNAME` | `inframonitor`                                     |
-| `SPRING_DATASOURCE_PASSWORD` | `inframonitor123`                                  |
+## 🔐 Configuração Docker
 
-## Licença
+As principais variáveis utilizadas pelo backend são:
+
+```env
+SPRING_PROFILES_ACTIVE=docker
+SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inframonitor
+SPRING_DATASOURCE_USERNAME=inframonitor
+SPRING_DATASOURCE_PASSWORD=inframonitor123
+```
+
+> Para ambientes reais, recomenda-se utilizar variáveis de ambiente ou secrets em vez de credenciais diretamente no `docker-compose.yml`.
+
+## 📌 Status
+
+**Projeto funcional e preparado para execução via Docker ou ambiente local.**
+
+## 📄 Licença
 
 Uso interno / educacional.
