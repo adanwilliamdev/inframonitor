@@ -1,16 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import {
-  AppBar, Toolbar, Typography, Container, Grid, Card, CardContent,
-  Button, Table, TableBody, TableCell, TableContainer, TableHead,
-  TableRow, Paper, IconButton, Chip, Box, LinearProgress, Drawer,
-  List, ListItemButton, ListItemIcon, ListItemText, Badge, CircularProgress,
-  Dialog, DialogTitle, DialogContent, DialogActions, TextField,
-  Tooltip
+  Typography, Container, Button, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Paper, IconButton, Box, LinearProgress,
+  Drawer, List, ListItemButton, ListItemIcon, ListItemText, CircularProgress,
+  Dialog, DialogTitle, DialogContent, DialogActions, TextField, Tooltip
 } from '@mui/material';
 import {
-  Dashboard, Storage, NetworkCheck,
+  Dashboard, NetworkCheck,
   Settings, Notifications, Refresh, Add,
-  Warning, CheckCircle, Cancel, Speed, Dns, Visibility, Delete
+  Warning, Speed, Dns, Visibility, Delete
 } from '@mui/icons-material';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ChartTooltip, Legend, ResponsiveContainer
@@ -18,6 +16,7 @@ import {
 import axios from 'axios';
 import { ToastContainer, toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import { colors } from './theme';
 
 const API_URL = 'http://localhost:8080/api';
 
@@ -30,12 +29,56 @@ const EMPTY_SERVER = {
 };
 
 const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Dashboard', icon: <Dashboard /> },
-  { key: 'servers', label: 'Servidores', icon: <Dns /> },
-  { key: 'alerts', label: 'Alertas', icon: <Notifications /> },
-  { key: 'monitoring', label: 'Monitoramento', icon: <NetworkCheck /> },
-  { key: 'settings', label: 'Configurações', icon: <Settings /> }
+  { key: 'dashboard', label: 'Dashboard', icon: <Dashboard fontSize="small" /> },
+  { key: 'servers', label: 'Servidores', icon: <Dns fontSize="small" /> },
+  { key: 'alerts', label: 'Alertas', icon: <Notifications fontSize="small" /> },
+  { key: 'monitoring', label: 'Monitoramento', icon: <NetworkCheck fontSize="small" /> },
+  { key: 'settings', label: 'Configurações', icon: <Settings fontSize="small" /> }
 ];
+
+const STATUS_META = {
+  ONLINE: { color: colors.online, label: 'online' },
+  OFFLINE: { color: colors.offline, label: 'offline' },
+  DEGRADED: { color: colors.degraded, label: 'degradado' },
+  MAINTENANCE: { color: colors.textSecondary, label: 'manutenção' }
+};
+
+const mono = { fontFamily: "'IBM Plex Mono', monospace" };
+
+function StatusDot({ status }) {
+  const meta = STATUS_META[status] || { color: colors.textSecondary, label: status || '—' };
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+      <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: meta.color, flexShrink: 0 }} />
+      <Typography variant="body2" sx={{ ...mono, color: colors.textPrimary }}>
+        {meta.label}
+      </Typography>
+    </Box>
+  );
+}
+
+function MetricBar({ value }) {
+  const v = value || 0;
+  const barColor = v > 85 ? colors.offline : v > 70 ? colors.degraded : colors.accent;
+  return (
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+      <Box sx={{ width: 72 }}>
+        <LinearProgress
+          variant="determinate"
+          value={v}
+          sx={{
+            height: 4,
+            borderRadius: 2,
+            '& .MuiLinearProgress-bar': { backgroundColor: barColor, borderRadius: 2 }
+          }}
+        />
+      </Box>
+      <Typography variant="body2" sx={{ ...mono, color: colors.textSecondary, minWidth: 40 }}>
+        {v.toFixed(1)}%
+      </Typography>
+    </Box>
+  );
+}
 
 function App() {
   const [servers, setServers] = useState([]);
@@ -69,24 +112,6 @@ function App() {
     } catch (error) {
       toast.error('Erro ao carregar servidores. O backend está rodando em localhost:8080?');
       setLoading(false);
-    }
-  };
-
-  const getStatusIcon = (status) => {
-    switch (status) {
-      case 'ONLINE': return <CheckCircle color="success" />;
-      case 'OFFLINE': return <Cancel color="error" />;
-      case 'DEGRADED': return <Warning color="warning" />;
-      default: return <CheckCircle color="disabled" />;
-    }
-  };
-
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'ONLINE': return 'success';
-      case 'OFFLINE': return 'error';
-      case 'DEGRADED': return 'warning';
-      default: return 'default';
     }
   };
 
@@ -150,82 +175,32 @@ function App() {
   const renderServerRow = (server) => (
     <TableRow key={server.id}>
       <TableCell>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Dns sx={{ mr: 1, color: '#1976d2' }} />
-          <strong>{server.name}</strong>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Dns sx={{ fontSize: 18, color: colors.textSecondary }} />
+          <Typography sx={{ fontWeight: 500 }}>{server.name}</Typography>
         </Box>
       </TableCell>
-      <TableCell>{server.ipAddress}</TableCell>
-      <TableCell>
-        <Chip
-          icon={getStatusIcon(server.status)}
-          label={server.status}
-          color={getStatusColor(server.status)}
-          size="small"
-        />
+      <TableCell sx={mono}>{server.ipAddress}</TableCell>
+      <TableCell><StatusDot status={server.status} /></TableCell>
+      <TableCell><MetricBar value={server.cpuUsage} /></TableCell>
+      <TableCell><MetricBar value={server.memoryUsage} /></TableCell>
+      <TableCell sx={mono}>{(server.diskUsage || 0).toFixed(1)}%</TableCell>
+      <TableCell sx={mono}>
+        <Typography variant="caption" sx={mono} component="div">↓ {(server.networkIn || 0).toFixed(1)} Mbps</Typography>
+        <Typography variant="caption" sx={mono} component="div">↑ {(server.networkOut || 0).toFixed(1)} Mbps</Typography>
       </TableCell>
-      <TableCell>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Box sx={{ width: '100%', mr: 1 }}>
-            <LinearProgress
-              variant="determinate"
-              value={server.cpuUsage || 0}
-              sx={{
-                height: 8,
-                borderRadius: 5,
-                backgroundColor: '#e0e0e0',
-                '& .MuiLinearProgress-bar': {
-                  backgroundColor: (server.cpuUsage || 0) > 80 ? '#d32f2f' : '#2e7d32'
-                }
-              }}
-            />
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            {(server.cpuUsage || 0).toFixed(1)}%
-          </Typography>
-        </Box>
-      </TableCell>
-      <TableCell>
-        <Box sx={{ display: 'flex', alignItems: 'center' }}>
-          <Box sx={{ width: '100%', mr: 1 }}>
-            <LinearProgress
-              variant="determinate"
-              value={server.memoryUsage || 0}
-              sx={{
-                height: 8,
-                borderRadius: 5,
-                backgroundColor: '#e0e0e0',
-                '& .MuiLinearProgress-bar': {
-                  backgroundColor: (server.memoryUsage || 0) > 80 ? '#d32f2f' : '#2e7d32'
-                }
-              }}
-            />
-          </Box>
-          <Typography variant="body2" color="text.secondary">
-            {(server.memoryUsage || 0).toFixed(1)}%
-          </Typography>
-        </Box>
-      </TableCell>
-      <TableCell>{(server.diskUsage || 0).toFixed(1)}%</TableCell>
-      <TableCell>
-        <Box>
-          <Typography variant="caption">IN: {(server.networkIn || 0).toFixed(1)} Mbps</Typography>
-          <br />
-          <Typography variant="caption">OUT: {(server.networkOut || 0).toFixed(1)} Mbps</Typography>
-        </Box>
-      </TableCell>
-      <TableCell>
+      <TableCell sx={{ ...mono, color: colors.textSecondary }}>
         {server.lastCheck ? new Date(server.lastCheck).toLocaleTimeString() : '—'}
       </TableCell>
-      <TableCell>
+      <TableCell align="right">
         <Tooltip title="Ver detalhes">
-          <IconButton size="small" color="primary" onClick={() => viewDetails(server)}>
-            <Visibility />
+          <IconButton size="small" onClick={() => viewDetails(server)}>
+            <Visibility fontSize="small" sx={{ color: colors.textSecondary }} />
           </IconButton>
         </Tooltip>
         <Tooltip title="Remover servidor">
-          <IconButton size="small" color="error" onClick={() => setDeleteTarget(server)}>
-            <Delete />
+          <IconButton size="small" onClick={() => setDeleteTarget(server)}>
+            <Delete fontSize="small" sx={{ color: colors.textSecondary }} />
           </IconButton>
         </Tooltip>
       </TableCell>
@@ -235,34 +210,34 @@ function App() {
   const renderTable = (list) => (
     <TableContainer component={Paper} sx={{ mt: 3 }}>
       <Table>
-        <TableHead sx={{ bgcolor: '#e3f2fd' }}>
+        <TableHead>
           <TableRow>
-            <TableCell><strong>Servidor</strong></TableCell>
-            <TableCell><strong>IP</strong></TableCell>
-            <TableCell><strong>Status</strong></TableCell>
-            <TableCell><strong>CPU</strong></TableCell>
-            <TableCell><strong>Memória</strong></TableCell>
-            <TableCell><strong>Disco</strong></TableCell>
-            <TableCell><strong>Rede</strong></TableCell>
-            <TableCell><strong>Último Check</strong></TableCell>
-            <TableCell><strong>Ações</strong></TableCell>
+            <TableCell>servidor</TableCell>
+            <TableCell>ip</TableCell>
+            <TableCell>status</TableCell>
+            <TableCell>cpu</TableCell>
+            <TableCell>memória</TableCell>
+            <TableCell>disco</TableCell>
+            <TableCell>rede</TableCell>
+            <TableCell>último check</TableCell>
+            <TableCell align="right">ações</TableCell>
           </TableRow>
         </TableHead>
         <TableBody>
           {loading ? (
             <TableRow>
-              <TableCell colSpan={9} align="center">
-                <CircularProgress />
+              <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                <CircularProgress size={24} sx={{ color: colors.accent }} />
               </TableCell>
             </TableRow>
           ) : list.length === 0 ? (
             <TableRow>
-              <TableCell colSpan={9} align="center">
-                <Typography variant="h6" sx={{ py: 4 }}>
-                  Nenhum servidor cadastrado
+              <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                <Typography sx={{ color: colors.textSecondary, mb: 2 }}>
+                  Nenhum servidor cadastrado ainda
                 </Typography>
-                <Button variant="contained" startIcon={<Add />} onClick={openAddDialog}>
-                  Adicionar Primeiro Servidor
+                <Button variant="outlined" startIcon={<Add />} onClick={openAddDialog}>
+                  Adicionar primeiro servidor
                 </Button>
               </TableCell>
             </TableRow>
@@ -274,41 +249,46 @@ function App() {
     </TableContainer>
   );
 
+  const statBlocks = [
+    { label: 'Total de servidores', value: servers.length },
+    { label: 'Online', value: servers.filter(s => s.status === 'ONLINE').length },
+    { label: 'Em alerta', value: alertCount, highlight: alertCount > 0 },
+    {
+      label: 'CPU média',
+      value: servers.length > 0
+        ? (servers.reduce((a, b) => a + (b.cpuUsage || 0), 0) / servers.length).toFixed(1) + '%'
+        : '—'
+    }
+  ];
+
+  const renderStatStrip = () => (
+    <Paper sx={{ display: 'flex', mb: 3 }}>
+      {statBlocks.map((stat, i) => (
+        <Box
+          key={stat.label}
+          sx={{
+            flex: 1,
+            p: 2.5,
+            borderRight: i < statBlocks.length - 1 ? `1px solid ${colors.border}` : 'none'
+          }}
+        >
+          <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 0.5 }}>
+            {stat.label}
+          </Typography>
+          <Typography
+            variant="h4"
+            sx={{ ...mono, fontWeight: 600, color: stat.highlight ? colors.degraded : colors.textPrimary }}
+          >
+            {stat.value}
+          </Typography>
+        </Box>
+      ))}
+    </Paper>
+  );
+
   const renderDashboard = () => (
     <>
-      <Grid container spacing={3} sx={{ mb: 3 }}>
-        {[
-          { title: 'Total Servidores', value: servers.length, icon: <Dns />, color: '#1976d2' },
-          { title: 'Online', value: servers.filter(s => s.status === 'ONLINE').length, icon: <CheckCircle />, color: '#2e7d32' },
-          { title: 'Alertas', value: alertCount, icon: <Warning />, color: '#ed6c02' },
-          {
-            title: 'Uso Médio CPU', value: servers.length > 0 ?
-              (servers.reduce((a, b) => a + (b.cpuUsage || 0), 0) / servers.length).toFixed(1) + '%' : '0%',
-            icon: <Storage />, color: '#9c27b0'
-          }
-        ].map((stat, index) => (
-          <Grid item xs={12} sm={6} md={3} key={index}>
-            <Card sx={{ height: '100%' }}>
-              <CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                  <Box sx={{
-                    p: 1, bgcolor: stat.color, color: 'white', borderRadius: 2,
-                    display: 'flex', mr: 2
-                  }}>
-                    {stat.icon}
-                  </Box>
-                  <Typography variant="h6" sx={{ flexGrow: 1 }}>
-                    {stat.title}
-                  </Typography>
-                </Box>
-                <Typography variant="h4" component="div" sx={{ mt: 2, textAlign: 'center' }}>
-                  {stat.value}
-                </Typography>
-              </CardContent>
-            </Card>
-          </Grid>
-        ))}
-      </Grid>
+      {renderStatStrip()}
       {renderTable(servers)}
     </>
   );
@@ -317,15 +297,18 @@ function App() {
     const alertServers = servers.filter(s => (s.cpuUsage || 0) > 85 || (s.memoryUsage || 0) > 85);
     return (
       <>
-        <Typography variant="h5" sx={{ mt: 2, mb: 1 }}>
-          Servidores em alerta (CPU ou memória acima de 85%)
+        <Typography variant="h5" sx={{ mt: 1, mb: 2 }}>
+          Servidores em alerta
+        </Typography>
+        <Typography variant="body2" sx={{ color: colors.textSecondary, mb: 2 }}>
+          CPU ou memória acima de 85% de uso
         </Typography>
         {!loading && alertServers.length === 0 ? (
-          <Card sx={{ mt: 2 }}>
-            <CardContent>
-              <Typography>Nenhum alerta no momento. Tudo dentro do esperado.</Typography>
-            </CardContent>
-          </Card>
+          <Paper sx={{ p: 4, textAlign: 'center' }}>
+            <Typography sx={{ color: colors.textSecondary }}>
+              Nenhum alerta no momento. Tudo dentro do esperado.
+            </Typography>
+          </Paper>
         ) : (
           renderTable(alertServers)
         )}
@@ -335,22 +318,25 @@ function App() {
 
   const renderMonitoring = () => (
     <>
-      <Typography variant="h5" sx={{ mt: 2, mb: 2 }}>
-        Uso de CPU e Memória por servidor
+      <Typography variant="h5" sx={{ mt: 1, mb: 2 }}>
+        Uso de CPU e memória por servidor
       </Typography>
-      <Paper sx={{ p: 2, height: 400 }}>
+      <Paper sx={{ p: 3, height: 420 }}>
         {servers.length === 0 ? (
-          <Typography>Sem dados para exibir ainda.</Typography>
+          <Typography sx={{ color: colors.textSecondary }}>Sem dados para exibir ainda.</Typography>
         ) : (
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={servers}>
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis dataKey="name" />
-              <YAxis unit="%" />
-              <ChartTooltip />
-              <Legend />
-              <Bar dataKey="cpuUsage" name="CPU %" fill="#1976d2" />
-              <Bar dataKey="memoryUsage" name="Memória %" fill="#9c27b0" />
+              <CartesianGrid strokeDasharray="3 3" stroke={colors.border} />
+              <XAxis dataKey="name" stroke={colors.textSecondary} tick={{ fontSize: 12, fontFamily: 'IBM Plex Mono' }} />
+              <YAxis unit="%" stroke={colors.textSecondary} tick={{ fontSize: 12, fontFamily: 'IBM Plex Mono' }} />
+              <ChartTooltip
+                contentStyle={{ backgroundColor: colors.elevated, border: `1px solid ${colors.border}`, borderRadius: 6 }}
+                labelStyle={{ color: colors.textPrimary }}
+              />
+              <Legend wrapperStyle={{ fontSize: 13 }} />
+              <Bar dataKey="cpuUsage" name="CPU %" fill={colors.accent} radius={[3, 3, 0, 0]} />
+              <Bar dataKey="memoryUsage" name="Memória %" fill={colors.degraded} radius={[3, 3, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -359,25 +345,21 @@ function App() {
   );
 
   const renderSettings = () => (
-    <Card sx={{ mt: 2 }}>
-      <CardContent>
-        <Typography variant="h6" gutterBottom>Configurações</Typography>
-        <Typography color="text.secondary">
-          Esta seção ainda não foi implementada nesta versão do projeto. As únicas
-          configurações ativas hoje são fixas no código: URL da API ({API_URL}) e
-          intervalo de atualização automática (30 segundos).
-        </Typography>
-      </CardContent>
-    </Card>
+    <Paper sx={{ p: 3, mt: 1 }}>
+      <Typography variant="h6" gutterBottom>Configurações</Typography>
+      <Typography sx={{ color: colors.textSecondary }}>
+        Esta seção ainda não foi implementada nesta versão do projeto. As únicas
+        configurações ativas hoje são fixas no código: URL da API ({API_URL}) e
+        intervalo de atualização automática (30 segundos).
+      </Typography>
+    </Paper>
   );
 
   const renderContent = () => {
     switch (activeView) {
       case 'servers': return (
         <>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: 2 }}>
-            <Typography variant="h5">Gerenciar Servidores</Typography>
-          </Box>
+          <Typography variant="h5" sx={{ mt: 1, mb: 2 }}>Gerenciar servidores</Typography>
           {renderTable(servers)}
         </>
       );
@@ -390,102 +372,133 @@ function App() {
   };
 
   return (
-    <Box sx={{ display: 'flex', height: '100vh' }}>
-      <ToastContainer position="top-right" theme="colored" />
+    <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: colors.bg }}>
+      <ToastContainer position="top-right" theme="dark" />
 
-      <Drawer variant="permanent" sx={{
-        width: 240,
-        flexShrink: 0,
-        '& .MuiDrawer-paper': { width: 240, boxSizing: 'border-box', bgcolor: '#1a237e' }
-      }}>
-        <Toolbar>
-          <Speed sx={{ color: 'white', mr: 2 }} />
-          <Typography variant="h6" sx={{ color: 'white' }}>
+      <Drawer
+        variant="permanent"
+        sx={{
+          width: 224,
+          flexShrink: 0,
+          '& .MuiDrawer-paper': { width: 224, boxSizing: 'border-box', borderRight: `1px solid ${colors.border}` }
+        }}
+      >
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.25, px: 2.5, py: 3 }}>
+          <Speed sx={{ color: colors.accent, fontSize: 22 }} />
+          <Typography variant="h6" sx={{ fontWeight: 600, letterSpacing: '-0.01em' }}>
             InfraMonitor
           </Typography>
-        </Toolbar>
-        <Box sx={{ overflow: 'auto', mt: 2 }}>
-          <List>
-            {NAV_ITEMS.map((item) => (
+        </Box>
+        <List sx={{ px: 1 }}>
+          {NAV_ITEMS.map((item) => {
+            const selected = activeView === item.key;
+            return (
               <ListItemButton
                 key={item.key}
-                selected={activeView === item.key}
+                selected={selected}
                 onClick={() => setActiveView(item.key)}
                 sx={{
-                  color: 'white',
-                  '&.Mui-selected': { bgcolor: 'rgba(255,255,255,0.15)' },
-                  '&.Mui-selected:hover': { bgcolor: 'rgba(255,255,255,0.2)' }
+                  borderRadius: 1,
+                  mb: 0.25,
+                  pl: 1.5,
+                  borderLeft: '3px solid transparent',
+                  color: selected ? colors.textPrimary : colors.textSecondary,
+                  '&.Mui-selected': {
+                    bgcolor: 'rgba(47,216,196,0.08)',
+                    borderLeft: `3px solid ${colors.accent}`
+                  },
+                  '&.Mui-selected:hover': { bgcolor: 'rgba(47,216,196,0.12)' },
+                  '&:hover': { bgcolor: 'rgba(231,234,242,0.04)' }
                 }}
               >
-                <ListItemIcon sx={{ color: 'white' }}>
-                  {item.key === 'alerts'
-                    ? <Badge badgeContent={alertCount} color="error">{item.icon}</Badge>
-                    : item.icon}
+                <ListItemIcon sx={{ minWidth: 32, color: selected ? colors.accent : 'inherit' }}>
+                  {item.icon}
                 </ListItemIcon>
-                <ListItemText primary={item.label} />
+                <ListItemText
+                  primary={item.label}
+                  primaryTypographyProps={{ fontSize: '0.9rem', fontWeight: selected ? 600 : 400 }}
+                />
+                {item.key === 'alerts' && alertCount > 0 && (
+                  <Box sx={{
+                    ...mono, fontSize: '0.7rem', color: colors.degraded,
+                    bgcolor: 'rgba(242,166,61,0.12)', borderRadius: 4, px: 0.75, py: 0.1
+                  }}>
+                    {alertCount}
+                  </Box>
+                )}
               </ListItemButton>
-            ))}
-          </List>
-        </Box>
+            );
+          })}
+        </List>
       </Drawer>
 
-      <Box component="main" sx={{ flexGrow: 1, bgcolor: '#f5f5f5', p: 3, overflow: 'auto' }}>
-        <AppBar position="sticky" sx={{ bgcolor: '#1a237e' }}>
-          <Toolbar>
-            <Typography variant="h6" sx={{ flexGrow: 1 }}>
-              {servers.length} Servidores Monitorados
+      <Box component="main" sx={{ flexGrow: 1, p: 4, overflow: 'auto' }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', mb: 3 }}>
+          <Box sx={{ flexGrow: 1 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+              <Box sx={{
+                width: 7, height: 7, borderRadius: '50%', bgcolor: colors.accent,
+                boxShadow: `0 0 0 3px rgba(47,216,196,0.18)`
+              }} />
+              <Typography variant="body2" sx={{ color: colors.textSecondary }}>
+                monitoramento ativo
+              </Typography>
+            </Box>
+            <Typography variant="h4" sx={{ mt: 0.5 }}>
+              {servers.length} servidores monitorados
             </Typography>
-            <Button
-              variant="contained"
-              startIcon={<Refresh />}
-              onClick={fetchServers}
-              sx={{ mr: 2, bgcolor: '#283593' }}
-            >
-              Atualizar
-            </Button>
-            <Button
-              variant="contained"
-              startIcon={<Add />}
-              onClick={openAddDialog}
-              sx={{ bgcolor: '#283593' }}
-            >
-              Adicionar
-            </Button>
-          </Toolbar>
-        </AppBar>
+          </Box>
+          <Button
+            variant="outlined"
+            startIcon={<Refresh fontSize="small" />}
+            onClick={fetchServers}
+            sx={{ mr: 1.5 }}
+          >
+            Atualizar
+          </Button>
+          <Button
+            variant="contained"
+            startIcon={<Add fontSize="small" />}
+            onClick={openAddDialog}
+          >
+            Adicionar servidor
+          </Button>
+        </Box>
 
-        <Container maxWidth="xl" sx={{ mt: 3 }}>
+        <Container maxWidth="xl" disableGutters>
           {renderContent()}
         </Container>
       </Box>
 
       {/* Dialog: Adicionar servidor */}
       <Dialog open={addOpen} onClose={() => !saving && setAddOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Adicionar Servidor</DialogTitle>
-        <DialogContent>
+        <DialogTitle>Adicionar servidor</DialogTitle>
+        <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
           <TextField
-            autoFocus margin="dense" label="Nome" fullWidth required
+            autoFocus label="Nome" fullWidth required
             value={newServer.name} onChange={handleNewServerChange('name')}
           />
           <TextField
-            margin="dense" label="Endereço IP" fullWidth required
+            label="Endereço IP" fullWidth required
             value={newServer.ipAddress} onChange={handleNewServerChange('ipAddress')}
           />
           <TextField
-            margin="dense" label="Descrição" fullWidth
+            label="Descrição" fullWidth
             value={newServer.description} onChange={handleNewServerChange('description')}
           />
           <TextField
-            margin="dense" label="Localização" fullWidth
+            label="Localização" fullWidth
             value={newServer.location} onChange={handleNewServerChange('location')}
           />
           <TextField
-            margin="dense" label="Sistema Operacional" fullWidth
+            label="Sistema operacional" fullWidth
             value={newServer.operatingSystem} onChange={handleNewServerChange('operatingSystem')}
           />
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setAddOpen(false)} disabled={saving}>Cancelar</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setAddOpen(false)} disabled={saving} sx={{ color: colors.textSecondary }}>
+            Cancelar
+          </Button>
           <Button onClick={submitNewServer} variant="contained" disabled={saving}>
             {saving ? 'Salvando...' : 'Salvar'}
           </Button>
@@ -494,41 +507,51 @@ function App() {
 
       {/* Dialog: Detalhes do servidor */}
       <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} fullWidth maxWidth="sm">
-        <DialogTitle>Detalhes do Servidor</DialogTitle>
+        <DialogTitle>Detalhes do servidor</DialogTitle>
         <DialogContent>
           {selectedServer && (
-            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1, mt: 1 }}>
-              <Typography><strong>Nome:</strong> {selectedServer.name}</Typography>
-              <Typography><strong>IP:</strong> {selectedServer.ipAddress}</Typography>
-              <Typography><strong>Status:</strong> {selectedServer.status}</Typography>
-              <Typography><strong>Descrição:</strong> {selectedServer.description || '—'}</Typography>
-              <Typography><strong>Localização:</strong> {selectedServer.location || '—'}</Typography>
-              <Typography><strong>Sistema Operacional:</strong> {selectedServer.operatingSystem || '—'}</Typography>
-              <Typography><strong>CPU:</strong> {(selectedServer.cpuUsage || 0).toFixed(1)}%</Typography>
-              <Typography><strong>Memória:</strong> {(selectedServer.memoryUsage || 0).toFixed(1)}%</Typography>
-              <Typography><strong>Disco:</strong> {(selectedServer.diskUsage || 0).toFixed(1)}%</Typography>
-              <Typography>
-                <strong>Último check:</strong>{' '}
-                {selectedServer.lastCheck ? new Date(selectedServer.lastCheck).toLocaleString() : '—'}
-              </Typography>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.25, mt: 0.5 }}>
+              {[
+                ['Nome', selectedServer.name],
+                ['IP', selectedServer.ipAddress],
+                ['Status', STATUS_META[selectedServer.status]?.label || selectedServer.status],
+                ['Descrição', selectedServer.description || '—'],
+                ['Localização', selectedServer.location || '—'],
+                ['Sistema operacional', selectedServer.operatingSystem || '—'],
+                ['CPU', `${(selectedServer.cpuUsage || 0).toFixed(1)}%`],
+                ['Memória', `${(selectedServer.memoryUsage || 0).toFixed(1)}%`],
+                ['Disco', `${(selectedServer.diskUsage || 0).toFixed(1)}%`],
+                ['Último check', selectedServer.lastCheck ? new Date(selectedServer.lastCheck).toLocaleString() : '—']
+              ].map(([label, value]) => (
+                <Box key={label} sx={{ display: 'flex', justifyContent: 'space-between', gap: 2 }}>
+                  <Typography variant="body2" sx={{ color: colors.textSecondary }}>{label}</Typography>
+                  <Typography variant="body2" sx={mono}>{value}</Typography>
+                </Box>
+              ))}
             </Box>
           )}
         </DialogContent>
-        <DialogActions>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
           <Button onClick={() => setDetailsOpen(false)}>Fechar</Button>
         </DialogActions>
       </Dialog>
 
       {/* Dialog: Confirmar exclusão */}
       <Dialog open={!!deleteTarget} onClose={() => !deleting && setDeleteTarget(null)}>
-        <DialogTitle>Remover servidor</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Warning sx={{ color: colors.degraded, fontSize: 20 }} />
+          Remover servidor
+        </DialogTitle>
         <DialogContent>
-          <Typography>
-            Tem certeza que deseja remover "{deleteTarget?.name}"? Essa ação não pode ser desfeita.
+          <Typography sx={{ color: colors.textSecondary }}>
+            Tem certeza que deseja remover <strong style={{ color: colors.textPrimary }}>{deleteTarget?.name}</strong>?
+            Essa ação não pode ser desfeita.
           </Typography>
         </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</Button>
+        <DialogActions sx={{ px: 3, pb: 2.5 }}>
+          <Button onClick={() => setDeleteTarget(null)} disabled={deleting} sx={{ color: colors.textSecondary }}>
+            Cancelar
+          </Button>
           <Button onClick={confirmDelete} color="error" variant="contained" disabled={deleting}>
             {deleting ? 'Removendo...' : 'Remover'}
           </Button>
