@@ -1,4 +1,4 @@
-package com.inframonitor.repository;
+﻿package com.inframonitor.repository;
 
 import com.inframonitor.model.Server;
 import com.inframonitor.model.ServerStatus;

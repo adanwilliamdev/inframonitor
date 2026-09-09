@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { BrowserRouter as Router } from 'react-router-dom';
+﻿import React, { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { 
   AppBar, Toolbar, Typography, Container, Grid, Card, CardContent, 
   Button, Table, TableBody, TableCell, TableContainer, TableHead, 
@@ -7,8 +7,8 @@ import {
   List, ListItem, ListItemIcon, ListItemText, Badge, CircularProgress
 } from '@mui/material';
 import {
-  Dashboard, Storage, NetworkCheck,
-  Settings, Notifications, Refresh, Add,
+  Dashboard, Storage, Memory, NetworkCheck,
+  Security, Settings, Notifications, Refresh, Add,
   Warning, CheckCircle, Cancel, Speed, Dns, Visibility
 } from '@mui/icons-material';
 import axios from 'axios';

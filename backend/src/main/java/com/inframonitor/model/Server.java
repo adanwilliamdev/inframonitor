@@ -1,4 +1,4 @@
-package com.inframonitor.model;
+﻿package com.inframonitor.model;
 
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
