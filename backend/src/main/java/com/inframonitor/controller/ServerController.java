@@ -1,4 +1,4 @@
-﻿package com.inframonitor.controller;
+package com.inframonitor.controller;
 
 import com.inframonitor.model.Server;
 import com.inframonitor.service.ServerService;
